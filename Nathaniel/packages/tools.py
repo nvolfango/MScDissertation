@@ -10,24 +10,10 @@ def preprocess_price_data(filename):
 
     # Convert dates from string to datetime objects
     price_data["AuctionDateTime"] = pd.to_datetime(price_data["AuctionDateTime"], format="%Y-%m-%d %H:%M:%S")
-    price_data["DeliveryPeriod"] = pd.to_datetime(price_data["DeliveryPeriod"], format="%Y-%m-%d %H:%M:%S")
-
-    # Split Delivery period into two columns, one for DeliveryDay, another for Hour ("TimeStepID")
-    delivery_day = price_data["DeliveryPeriod"].apply(lambda date: date.strftime("%Y-%m-%d"))
-    time_step_id = price_data["DeliveryPeriod"].apply(lambda date: int(date.strftime("%H"))+1)
-
-    # Replace DeliveryPeriod with its component columns (DeliveryDay and TimeStepID)
-    price_data.insert(2, "DeliveryDay", delivery_day)
-    price_data.insert(3, "TimeStepID", time_step_id)
-    price_data["DeliveryDay"] = pd.to_datetime(price_data["DeliveryDay"], format="%Y-%m-%d")
+    price_data["DeliveryPeriod"] = pd.to_datetime(price_data["DeliveryPeriod"], format="%Y-%m-%d %H:%M:%S") + dt.timedelta(hours=1)
     
-    price_data.drop(["DeliveryPeriod"], axis=1, inplace=True)
-    
-    # Change rows with hour 24 from previous day to hour 0 in the next day (makes the data easier to handle)
-    price_data.loc[price_data["TimeStepID"]==24,"DeliveryDay"] = price_data.loc[price_data["TimeStepID"]==24,"DeliveryDay"] + dt.timedelta(days=1)
-    price_data["TimeStepID"] = price_data["TimeStepID"].replace({24:0})
-
-    price_data.set_index(["DeliveryDay", "TimeStepID"], inplace=True)
+    # Set DeliveryPeriod as index
+    price_data.set_index(["DeliveryPeriod"], inplace=True)
     
     return(price_data)
 
@@ -109,7 +95,7 @@ def walk_forward_validation(method_function, parameters, data, starting_window_s
     # using the specific model defined by method_function.
     while available_data.index[-1][0] <= end:
         if method_function == naive:
-            # Generate forecasts (no training here since naive model doesn't need to be trained)
+                # Generate forecasts (no training here since naive model doesn't need to be trained)
             forecast_target = train_dates[-1] + dt.timedelta(days=1)
             forecast = naive(data=available_data, target=forecast_target, **parameters)
             
